@@ -1,6 +1,5 @@
-function getPath(src, dst) {
-    var dS = new google.maps.DirectionsService,
-        path = [];
+function getPath(src, dst, callBack) {
+    var path = [];
 
     dS.route({
         origin: src,
@@ -11,12 +10,18 @@ function getPath(src, dst) {
             var route = resp.routes[0].overview_path;
             if (route.length > 0) {
                 for (var i = 0; i < route.length; i++) {
-                    path.push(route[i].toJSON());
+                    var point = route[i].toJSON();
+//                    point.i = i;
+                    path.push(point);
                 }
-                return path;
+                if (typeof callBack == 'function') {
+                    callBack(path, status);
+                }
             }
         } else {
-
+            if (typeof callBack == 'function') {
+                callBack(path, status);
+            }
         }
     });
 }
@@ -28,8 +33,7 @@ function setMarkers(points, map, label) {
         var marker = new google.maps.Marker({
             position: points[i],
             map: map,
-            label: label,
-            i: i
+            label: label
         });
         markers.push(marker);
     }
@@ -38,18 +42,20 @@ function setMarkers(points, map, label) {
 }
 
 function normalize(points, withSort) {
-    var np = [];
+
+    var newPoints = [];
     for (var i = 0; i < points.length; i++) {
         var distance = Math.sqrt(points[i].lat * points[i].lat + points[i].lng * points[i].lng);
-        var obj = {
+        newPoints.push({
             lat: points[i].lat,
             lng: points[i].lng,
-            dist: distance
-        };
-        np.push(obj);
+            dist: distance,
+            i: i
+        });
     }
+
     if (withSort) {
-        np.sort(function (a, b) {
+        newPoints.sort(function (a, b) {
             if (a.dist > b.dist) {
                 return 1;
             }
@@ -59,36 +65,57 @@ function normalize(points, withSort) {
             return 0;
         });
     }
-    return np;
+
+    return newPoints;
 }
+
+//function normalize(points, withSort) {
+//    var np = [];
+//    for (var i = 0; i < points.length; i++) {
+//        var distance = Math.sqrt(points[i].lat * points[i].lat + points[i].lng * points[i].lng);
+//        var obj = {
+//            lat: points[i].lat,
+//            lng: points[i].lng,
+//            dist: distance
+//        };
+//        np.push(obj);
+//    }
+//    if (withSort) {
+//        np.sort(function (a, b) {
+//            if (a.dist > b.dist) {
+//                return 1;
+//            }
+//            if (a.dist < b.dist) {
+//                return -1;
+//            }
+//            return 0;
+//        });
+//    }
+//    return np;
+//}
 
 function binSearch(points, el) {
     var mid = Math.round(points.length / 2);
     var pmid = points.length - 1;
-    //            debugger;
     var p = 0.01;
     while (mid >= 0 && mid <= points.length) {
 
         if (mid == pmid) {
-            if (points[mid].dist == el.dist /* && points[mid].x == el.x*/ ) {
-                //                        return [el, points[mid]];
-                //                        if (Math.abs(el.lat - points[mid].lat) < p ||
-                //                            Math.abs(el.lng - points[mid].lng) < p) {
+            if (points[mid].dist == el.dist) {
                 return {
                     a: el,
                     b: points[mid]
                 };
-                //                        }
             }
             break;
         }
-        if (points[mid].dist > el.dist /* && points[mid].dist > el.dist + p && points[mid].dist > el.dist - p*/ ) {
+        if (points[mid].dist > el.dist) {
             var tmp = mid;
             mid = mid - (Math.round((pmid - mid) / 2));
             pmid = tmp;
             continue;
         }
-        if (points[mid].dist < el.dist /* && points[mid].dist < el.dist + p && points[mid].dist < el.dist - p*/ ) {
+        if (points[mid].dist < el.dist) {
             var tmp = mid;
             mid = mid + (Math.round((pmid - mid) / 2));
             if (tmp > mid) {
@@ -96,13 +123,10 @@ function binSearch(points, el) {
             }
             continue;
         }
-        //                if (Math.abs(el.lat - points[mid].lat) < p ||
-        //                    Math.abs(el.lng - points[mid].lng) < p) {
         return {
             a: points[mid],
             b: el
         };
-        //                }
         break;
     }
     return false;
