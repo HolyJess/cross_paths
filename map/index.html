@@ -1,0 +1,215 @@
+<html>
+
+<head>
+    <title></title>
+    <meta content="">
+    <style>
+        #map {
+            height: 100%;
+        }
+        /* Optional: Makes the sample page fill the window. */
+
+        html,
+        body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+
+    </style>
+</head>
+
+<body>
+    <div id="map"></div>
+
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBRYrnWSKgDlcg56faS5lMJ3LmL97CuSPQ&callback=initMap" async defer></script>
+    <script>
+        var map,
+            pathA = [],
+            pathB = [],
+            markersA = [],
+            markersB = [],
+            markersCross = [],
+            lineA,
+            lineB,
+            aRecieved = false,
+            directionsService,
+            directionsDisplay;
+
+        function initMap() {
+
+            directionsService = new google.maps.DirectionsService;
+            directionsDisplay = new google.maps.DirectionsRenderer;
+            map = new google.maps.Map(document.getElementById('map'), {
+                center: {
+                    lat: 55.793717,
+                    lng: 37.612440
+                },
+                zoom: 14
+            });
+
+
+            directionsService.route({
+                origin: "Метро Щёлковская", //"Метро Царицыно",
+                destination: "Метро Дмитровская", //"Метро Тульская",
+                travelMode: 'DRIVING'
+            }, function(resp, status) {
+                if (status === "OK") {
+                    directionsDisplay.setDirections(resp);
+                    var route = resp.routes[0].overview_path;
+                    if (route.length > 0) {
+                        var path = [];
+                        for (var i = 0; i < route.length; i++) {
+                            path.push(route[i].toJSON());
+                        }
+                        aRecieved = true;
+                        pathA = path.slice();
+                    }
+                    markersA.push(setMarkers(path, map, 'A'));
+                    lineA = new google.maps.Polyline({
+                        path: pathA,
+                        geodesic: true,
+                        strokeColor: '#00FF00',
+                        strokeOpacity: 1.0,
+                        strokeWeight: 4
+                    });
+
+                    lineA.setMap(map);
+                } else {
+                    alert(status);
+                }
+            });
+            directionsService.route({
+                origin: "Метро Бульвар Рокоссовского", //"Метро Нагорная",
+                destination: "Метро Динамо", //"Метро Кантемировкая",
+                travelMode: 'DRIVING'
+            }, function(resp, status) {
+                if (status === "OK") {
+                    directionsDisplay.setDirections(resp);
+                    var route = resp.routes[0].overview_path;
+                    if (route.length > 0) {
+                        var path = [];
+                        for (var i = 0; i < route.length; i++) {
+                            path.push(route[i].toJSON());
+                        }
+                        pathB = path;
+                        if (aRecieved) {
+                            calcPaths();
+                        }
+                    }
+                    markersB.push(setMarkers(path, map, 'B'));
+                    lineB = new google.maps.Polyline({
+                        path: pathB,
+                        geodesic: true,
+                        strokeColor: '#0000FF',
+                        strokeOpacity: 1.0,
+                        strokeWeight: 2
+                    });
+
+                    lineB.setMap(map);
+                } else {
+                    alert(status);
+                }
+            });
+            //            directionsDisplay.setMap(map);
+        }
+
+        function calcPaths() {
+            var sortedPathA = normalize(pathA, true);
+            pathB = normalize(pathB);
+            var cross = [];
+            for (var i = 0; i < pathB.length; i++) {
+                var finded;
+                if (finded = binSearch(sortedPathA, pathB[i])) {
+                    cross.push(finded);
+                }
+            }
+
+            if (cross.length > 3) {
+                var aStep = cross[0].a.i - cross[1].a.i - cross[2].a.i;
+                var bStep = cross[0].b.i - cross[1].b.i - cross[2].b.i;
+
+                var direction;
+                //Если пути идут в оду и ту же сторону
+                if ((aStep < 0 && bStep < 0) || (aStep > 0 && bStep > 0)) {
+                    if (aStep < 0 && bStep < 0) {
+                        direction = 'asc';
+                    }
+                    if (aStep > 0 && bStep > 0) {
+                        direction = 'dsc';
+                    }
+
+                    //                    var markers = [];
+                    //                    for (var i = 0; i < cross.length; i++) {
+                    //                        var marker = new google.maps.Marker({
+                    //                            position: cross.a,
+                    //                            map: map
+                    //                        });
+                    //                        markers.push(marker);
+                    //                    }
+                    var tmpCrossPath = [];
+                    for (var i = 0; i < cross.length; i++) {
+                        tmpCrossPath.push(cross[i].a);
+                    }
+                    markersCross = setMarkers(tmpCrossPath, map);
+                    //                    console.log(cross[0]);
+                    var a;
+                    var b;
+                    if (direction === 'asc') {
+                        console.log();
+                        ai = cross[0].a.i;
+                        bi = cross[0].b.i;
+                        var longPathLen = (pathA.length > pathB.length) ? pathA.length - ai : pathB.length - bi;
+
+                        for(var i = 0; i < longPathLen; i++){
+
+                        }
+
+
+//                        new google.maps.Circle({
+//                            map: map,
+//                            center: a,
+//                            fillColor: '#000000',
+//                            radius: 5
+//                        });
+//                        new google.maps.Circle({
+//                            map: map,
+//                            center: a1,
+//                            fillColor: '#000000',
+//                            radius: 5
+//                        });
+//                        new google.maps.Circle({
+//                            map: map,
+//                            center: b,
+//                            fillColor: '#00FF00',
+//                            radius: 5
+//                        });
+//                        new google.maps.Circle({
+//                            map: map,
+//                            center: b1,
+//                            fillColor: '#00FF00',
+//                            radius: 5
+//                        });
+
+//                        var cosA = (a1.lat * b.lat + a1.lng * b.lng) /
+//                            (Math.sqrt(a1.lat * a1.lat + a1.lng * a1.lng) * Math.sqrt(b.lat * b.lat + b.lng * b.lng));
+//                        var angA = Math.acos(cosA);
+
+                    }
+                    if (direction === 'dsc') {
+
+                    }
+                } else {
+                    alert("Пути идут в разных направлениях");
+                }
+            } else {
+                alert("Нет совпадающих путей");
+            }
+        }
+
+    </script>
+
+    <script src="functions.js"></script>
+</body>
+
+</html>
